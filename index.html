@@ -1,0 +1,1005 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NueTech Device Flasher</title>
+<script type="module" src="https://unpkg.com/esp-web-tools@10/dist/web/install-button.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  /* ===== DARK THEME (default) ===== */
+  :root, [data-theme="dark"] {
+    --bg:        #0a0c10;
+    --surface:   #111318;
+    --surface2:  #181b23;
+    --border:    #1e2330;
+    --border-hi: #2d3448;
+    --accent:    #00c8ff;
+    --accent2:   #0077ff;
+    --success:   #00e676;
+    --warn:      #ffab40;
+    --danger:    #ff5252;
+    --text:      #e8ecf0;
+    --muted:     #6b7a99;
+    --card-glow: 0 0 0 1px var(--border), 0 20px 60px rgba(0,0,0,0.6);
+    --grid-line: rgba(0,200,255,0.03);
+    --topbar-bg: rgba(10,12,16,0.95);
+    --warning-bg: rgba(255,171,64,0.08);
+    --warning-border: rgba(255,171,64,0.3);
+    --code-bg:   rgba(0,0,0,0.4);
+  }
+
+  /* ===== LIGHT THEME ===== */
+  [data-theme="light"] {
+    --bg:        #f0f4f8;
+    --surface:   #ffffff;
+    --surface2:  #f7f9fc;
+    --border:    #dde3ed;
+    --border-hi: #bbc5d8;
+    --accent:    #0077cc;
+    --accent2:   #005fa3;
+    --success:   #00a854;
+    --warn:      #e07800;
+    --danger:    #cc2200;
+    --text:      #1a2130;
+    --muted:     #5a6a80;
+    --card-glow: 0 0 0 1px var(--border), 0 8px 30px rgba(0,0,0,0.08);
+    --grid-line: rgba(0,100,200,0.04);
+    --topbar-bg: rgba(255,255,255,0.95);
+    --warning-bg: rgba(224,120,0,0.07);
+    --warning-border: rgba(224,120,0,0.35);
+    --code-bg:   rgba(0,0,0,0.06);
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: 'Inter', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    transition: background 0.3s, color 0.3s;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(var(--grid-line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* ===== TOP BAR ===== */
+  .topbar {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 40px;
+    border-bottom: 1px solid var(--border);
+    background: var(--topbar-bg);
+    backdrop-filter: blur(12px);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    transition: background 0.3s, border-color 0.3s;
+  }
+
+  .logo { display: flex; align-items: center; gap: 12px; text-decoration: none; }
+
+  .logo-img { height: 44px; width: auto; object-fit: contain; }
+
+  .logo-sub {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--muted);
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    margin-top: 2px;
+  }
+
+  .topbar-right { display: flex; align-items: center; gap: 14px; }
+
+  .version-badge {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    padding: 4px 10px;
+    background: rgba(0,200,255,0.08);
+    border: 1px solid rgba(0,200,255,0.2);
+    border-radius: 4px;
+    color: var(--accent);
+  }
+
+  /* ===== THEME TOGGLE ===== */
+  .theme-toggle {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 5px 12px;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--muted);
+    transition: all 0.2s;
+  }
+  .theme-toggle:hover { border-color: var(--border-hi); color: var(--text); }
+  .theme-toggle .icon { font-size: 14px; }
+
+  .admin-link {
+    font-size: 13px; font-weight: 500; color: var(--muted);
+    text-decoration: none; padding: 6px 14px;
+    border-radius: 6px; border: 1px solid var(--border);
+    transition: all 0.2s;
+  }
+  .admin-link:hover { color: var(--text); border-color: var(--border-hi); background: var(--surface); }
+
+  /* ===== MAIN ===== */
+  main {
+    position: relative; z-index: 1;
+    width: 100%; max-width: 620px;
+    padding: 60px 20px 80px;
+    display: flex; flex-direction: column; gap: 24px;
+  }
+
+  /* ===== HERO ===== */
+  .hero { text-align: center; margin-bottom: 8px; }
+
+  .hero-eyebrow {
+    font-size: 11px; font-weight: 600; letter-spacing: 2px;
+    text-transform: uppercase; color: var(--accent);
+    margin-bottom: 14px;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+  }
+  .hero-eyebrow::before, .hero-eyebrow::after {
+    content: ''; flex: 1; max-width: 60px; height: 1px;
+    background: linear-gradient(to right, transparent, var(--accent)); opacity: 0.4;
+  }
+  .hero-eyebrow::after { background: linear-gradient(to left, transparent, var(--accent)); }
+
+  .hero h1 {
+    font-size: 32px; font-weight: 700; line-height: 1.2;
+    letter-spacing: -0.5px; margin-bottom: 12px;
+  }
+  .hero h1 span {
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+  }
+  .hero p { font-size: 14px; color: var(--muted); line-height: 1.6; }
+
+  /* ===== INSTALLATION COUNTER ===== */
+  .install-counter {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 22px 28px;
+    display: flex; align-items: center; justify-content: center; gap: 18px;
+    box-shadow: var(--card-glow);
+  }
+  .counter-icon {
+    width: 48px; height: 48px; border-radius: 12px;
+    background: linear-gradient(135deg, rgba(0,200,255,0.15), rgba(0,119,255,0.15));
+    border: 1px solid rgba(0,200,255,0.25);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px;
+  }
+  .counter-info { display: flex; flex-direction: column; }
+  .counter-value {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 36px; font-weight: 700; color: var(--accent); line-height: 1;
+  }
+  .counter-label { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-top: 4px; }
+
+  /* ===== FLASH CARD ===== */
+  .flash-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 16px; box-shadow: var(--card-glow); overflow: hidden;
+  }
+  .flash-card-header {
+    padding: 18px 24px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 12px;
+  }
+  .status-dot {
+    width: 9px; height: 9px; border-radius: 50%;
+    background: var(--success); box-shadow: 0 0 8px var(--success); flex-shrink: 0;
+    animation: pulse-dot 2s infinite;
+  }
+  @keyframes pulse-dot {
+    0%,100% { box-shadow: 0 0 6px var(--success); }
+    50% { box-shadow: 0 0 14px var(--success); }
+  }
+  .flash-card-header-text .title { font-size: 14px; font-weight: 600; }
+  .flash-card-header-text .sub {
+    font-size: 12px; color: var(--muted);
+    font-family: 'JetBrains Mono', monospace; margin-top: 2px;
+  }
+  .flash-card-body { padding: 24px 24px; }
+
+  .fw-info { margin-bottom: 22px; }
+  .fw-row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 16px;
+    background: var(--code-bg);
+    border: 1px solid var(--border); border-radius: 10px;
+  }
+  .fw-key { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
+  .fw-val { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--accent); }
+
+  /* Progress bar */
+  #progressWrap { display: none; margin-bottom: 20px; }
+  .progress-label {
+    display: flex; justify-content: space-between;
+    font-size: 12px; color: var(--muted); margin-bottom: 8px;
+  }
+  .progress-track { height: 5px; background: var(--border); border-radius: 99px; overflow: hidden; }
+  .progress-fill {
+    height: 100%; width: 0%;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    border-radius: 99px; transition: width 0.4s ease;
+  }
+
+  /* esp-web-install-button */
+  esp-web-install-button { display: block; }
+  esp-web-install-button::part(button) {
+    width: 100%; padding: 14px 24px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    color: #fff; border: none; border-radius: 10px;
+    font-family: 'Inter', sans-serif; font-size: 15px; font-weight: 600;
+    cursor: pointer; letter-spacing: 0.3px;
+    transition: opacity 0.2s, transform 0.1s;
+  }
+  esp-web-install-button::part(button):hover { opacity: 0.9; }
+  esp-web-install-button::part(button):active { transform: scale(0.99); }
+
+  #status {
+    margin-top: 14px; font-size: 13px;
+    min-height: 20px; text-align: center;
+  }
+  #status.success { color: var(--success); }
+  #status.error   { color: var(--danger); }
+  #status.info    { color: var(--accent); }
+
+  /* ===== STEPS CARD ===== */
+  .steps-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 16px; padding: 28px 24px;
+    box-shadow: var(--card-glow);
+  }
+  .steps-title {
+    font-size: 13px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 1.2px;
+    color: var(--muted); margin-bottom: 22px;
+    padding-bottom: 12px; border-bottom: 1px solid var(--border);
+  }
+  .steps { display: flex; flex-direction: column; gap: 0; }
+
+  .step {
+    display: flex; align-items: flex-start; gap: 16px;
+    padding: 18px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .step:last-child { border-bottom: none; padding-bottom: 0; }
+
+  .step-num {
+    width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0;
+    background: rgba(0,200,255,0.1); border: 1px solid rgba(0,200,255,0.3);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 700; color: var(--accent); margin-top: 1px;
+  }
+  .step-content { flex: 1; }
+  .step-title { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 6px; }
+  .step-text { font-size: 13px; color: var(--muted); line-height: 1.65; }
+  .step-text strong { color: var(--text); font-weight: 500; }
+
+  /* Pin connection table */
+  .pin-table {
+    width: 100%; margin: 12px 0;
+    border-collapse: collapse; border-radius: 8px; overflow: hidden;
+    font-size: 12px;
+  }
+  .pin-table thead tr { background: rgba(0,200,255,0.12); }
+  .pin-table th {
+    padding: 9px 14px; text-align: left;
+    font-weight: 600; color: var(--accent);
+    font-size: 11px; letter-spacing: 0.5px; text-transform: uppercase;
+  }
+  .pin-table td {
+    padding: 9px 14px; border-top: 1px solid var(--border);
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .pin-table tr:nth-child(even) td { background: var(--code-bg); }
+  .arrow { color: var(--accent); font-weight: 700; }
+
+  /* Warning box */
+  .warning-box {
+    display: flex; align-items: flex-start; gap: 10px;
+    background: var(--warning-bg); border: 1px solid var(--warning-border);
+    border-radius: 8px; padding: 12px 14px; margin-top: 12px;
+    font-size: 12px; color: var(--warn); line-height: 1.6;
+  }
+  .warning-box .warn-icon { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
+
+  /* Console snippet */
+  .console-box {
+    background: var(--code-bg); border: 1px solid var(--border);
+    border-radius: 8px; padding: 12px 14px; margin-top: 10px;
+    font-family: 'JetBrains Mono', monospace; font-size: 11px;
+    color: var(--success); line-height: 1.7;
+  }
+
+  /* Image hint */
+  .img-hint {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 12px; color: var(--accent); margin-top: 10px;
+    text-decoration: none; border-bottom: 1px dashed rgba(0,200,255,0.35);
+    padding-bottom: 1px;
+  }
+  .img-hint:hover { opacity: 0.8; }
+
+  /* Note box */
+  .note-box {
+    background: rgba(0,200,255,0.06); border: 1px solid rgba(0,200,255,0.2);
+    border-radius: 8px; padding: 11px 14px; margin-top: 10px;
+    font-size: 12px; color: var(--muted); line-height: 1.6;
+  }
+  .note-box strong { color: var(--accent); }
+
+  /* Blank placeholder */
+  .blank-space {
+    background: var(--surface2); border: 1px dashed var(--border);
+    border-radius: 8px; padding: 18px 14px; margin-top: 10px;
+    font-size: 12px; color: var(--muted); text-align: center; font-style: italic;
+  }
+
+  /* ===== FOOTER ===== */
+  footer {
+    position: relative; z-index: 1; border-top: 1px solid var(--border);
+    width: 100%; padding: 20px 40px;
+    display: flex; align-items: center; justify-content: space-between;
+    margin-top: auto;
+  }
+  footer .copy { font-size: 12px; color: var(--muted); }
+  footer .copy span { color: var(--accent); }
+  footer .powered { font-size: 11px; color: var(--muted); font-family: 'JetBrains Mono', monospace; }
+
+  .glow-orb {
+    position: fixed; width: 500px; height: 500px; border-radius: 50%;
+    background: radial-gradient(circle, rgba(0,200,255,0.05) 0%, transparent 70%);
+    top: 5%; left: 50%; transform: translateX(-50%);
+    pointer-events: none; z-index: 0;
+  }
+
+  @media (max-width: 600px) {
+    .topbar { padding: 12px 16px; }
+    .logo-img { height: 34px; }
+    footer { flex-direction: column; gap: 8px; text-align: center; padding: 16px 20px; }
+    main { padding: 40px 14px 60px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="glow-orb"></div>
+
+<!-- TOP BAR -->
+<header class="topbar">
+  <a href="index.html" class="logo">
+    <img src="Nuetech_Logo_dark.png" alt="NueTech Logo" class="logo-img" id="logoImg">
+    <div class="logo-sub">Device Flasher</div>
+  </a>
+  <div class="topbar-right">
+    <div class="version-badge" id="topVersion">v2.2_ND_1</div>
+    <button class="theme-toggle" id="themeToggle" title="Toggle theme">
+      <span class="icon" id="themeIcon">☀️</span>
+      <span id="themeLabel">Light</span>
+    </button>
+    <a href="admin.html" class="admin-link">Admin ↗</a>
+  </div>
+</header>
+
+<!-- MAIN -->
+<main>
+
+  <!-- Hero -->
+  <div class="hero">
+    <div class="hero-eyebrow">Firmware Flash Tool</div>
+    <h1>Flash Your <span>NueTech</span> Device</h1>
+    <p>Connect your NueTech device via FTDI programmer and flash the latest certified firmware directly from your browser — no software installation required.</p>
+  </div>
+
+  <!-- Installation Counter -->
+  <div class="install-counter">
+    <div class="counter-icon">⚡</div>
+    <div class="counter-info">
+      <div class="counter-value" id="count">—</div>
+      <div class="counter-label">Total Installations Completed</div>
+    </div>
+  </div>
+
+  <!-- Flash Card -->
+  <div class="flash-card">
+    <div class="flash-card-header">
+      <div class="status-dot"></div>
+      <div class="flash-card-header-text">
+        <div class="title">Ready to Flash</div>
+        <div class="sub" id="fwSubTitle">Nuetech Firmware v2.2 — Release Build</div>
+      </div>
+    </div>
+    <div class="flash-card-body">
+
+      <div class="fw-info">
+        <div class="fw-row">
+          <span class="fw-key">Firmware Version</span>
+          <span class="fw-val" id="fwVersion">v2.2_ND_1_Final_Code.ino.bin</span>
+        </div>
+      </div>
+
+      <div id="progressWrap">
+        <div class="progress-label">
+          <span id="progLabel">Flashing…</span>
+          <span id="progPct">0%</span>
+        </div>
+        <div class="progress-track">
+          <div class="progress-fill" id="progressFill"></div>
+        </div>
+      </div>
+
+      <esp-web-install-button id="installer" manifest="manifest.json"></esp-web-install-button>
+
+      <div id="status"></div>
+    </div>
+  </div>
+
+  <!-- HOW TO FLASH STEPS -->
+  <div class="steps-card">
+    <div class="steps-title">How to Flash</div>
+    <div class="steps">
+
+      <!-- STEP 1 -->
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-content">
+          <div class="step-title">Connect Nuetech Device with FTDI Programmer</div>
+          <div class="step-text">
+            Use a <strong>USB to Mini-B type cable</strong> to connect the FTDI programmer to your computer, then wire the FTDI to your NueTech device as follows:
+          </div>
+
+          <table class="pin-table">
+            <thead>
+              <tr>
+                <th>FTDI Programmer Pin</th>
+                <th></th>
+                <th>NueTech Device Pin</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>RX</td>
+                <td class="arrow">→</td>
+                <td>TX</td>
+              </tr>
+              <tr>
+                <td>TX</td>
+                <td class="arrow">→</td>
+                <td>RX</td>
+              </tr>
+              <tr>
+                <td>GND</td>
+                <td class="arrow">→</td>
+                <td>GND</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <div class="warning-box">
+            <span class="warn-icon">⚠️</span>
+            <span><strong>Important:</strong> The jumper pin on the FTDI programmer <strong>must be set to 3.3V logic level</strong> before connecting. Setting it to 5V may permanently damage your NueTech device.</span>
+          </div>
+
+          <a class="img-hint" href="https://www.google.com/search?q=FTDI+programmer+3.3V+jumper+setting+pinout&tbm=isch" target="_blank" rel="noopener">
+            🖼️ View reference image: FTDI 3.3V jumper &amp; pinout →
+          </a>
+        </div>
+      </div>
+
+      <!-- STEP 2 -->
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-content">
+          <div class="step-title">Open Flash Website &amp; Click Connect</div>
+          <div class="step-text">
+            Go to the <strong>Nuetech Device Flash Website</strong>, then click the <strong>Connect</strong> button above. A browser dialog will appear — select the correct <strong>COM port</strong> corresponding to your connected NueTech device.
+            <br><br>
+            <strong>Tip:</strong> Use <strong>Google Chrome</strong> or <strong>Microsoft Edge</strong> for best compatibility. If no port appears, check your USB cable and FTDI driver installation.
+          </div>
+        </div>
+      </div>
+
+      <!-- STEP 3 -->
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-content">
+          <div class="step-title">Enter Programming Mode via Logs &amp; Console</div>
+          <div class="step-text">
+            After connecting, a pop-up will appear. Click <strong>Logs &amp; Console</strong>.
+            <br><br>
+            Then on the NueTech device:
+            <br>① <strong>Hold the EN button</strong> on the device
+            <br>② While holding EN, <strong>turn OFF then ON</strong> the device using the NueTech Power ON/OFF button
+            <br><br>
+            You should see the following output in the Console, confirming the device is in <strong>Programming Mode</strong>:
+          </div>
+          <div class="console-box">
+            rst:0x1 (POWERON_RESET),boot:0x3(DOWNLOAD_BOOT(UART0/UART1/SDIO_REI_REO_V2))<br>
+            waiting for download
+          </div>
+          <div class="note-box">
+            <strong>✓ This output confirms the device is now in Programming Mode and ready to be flashed.</strong>
+          </div>
+        </div>
+      </div>
+
+      <!-- STEP 4 -->
+      <div class="step">
+        <div class="step-num">4</div>
+        <div class="step-content">
+          <div class="step-title">Install Firmware &amp; Wait for Completion</div>
+          <div class="step-text">
+            Click the <strong>Back</strong> button in the pop-up. You will now see the <strong>Connecting…</strong> pop-up. Click <strong>Install Nuetech Firmware</strong> (the current firmware version will be shown alongside).
+            <br><br>
+            The flashing process will begin. Wait until the progress reaches <strong>100%</strong> and you receive a <strong>Successful</strong> pop-up.
+          </div>
+          <div class="warning-box">
+            <span class="warn-icon">⚠️</span>
+            <span><strong>Do NOT turn OFF the device</strong> during this process, and ensure there are <strong>no loose connections</strong> between the device and your laptop/computer. Any interruption may corrupt the firmware.</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- STEP 5 -->
+      <div class="step">
+        <div class="step-num">5</div>
+        <div class="step-content">
+          <div class="step-title">Restart Device &amp; Verify via Console</div>
+          <div class="step-text">
+            After the <strong>Successful</strong> pop-up appears, click <strong>Next</strong>. Then click <strong>Logs &amp; Console</strong> again.
+            <br><br>
+            Now <strong>turn OFF and then ON</strong> the NueTech device using the Power ON/OFF button to let it boot with the new firmware.
+          </div>
+          <div class="blank-space">
+            [ Additional steps will be added here ]
+          </div>
+        </div>
+      </div>
+
+      <!-- STEP 6 -->
+      <div class="step">
+        <div class="step-num">6</div>
+        <div class="step-content">
+          <div class="step-title">Change Device Name via AT Command</div>
+          <div class="step-text">
+            To assign a unique name to the device, click the <strong>&gt; arrow</strong> input field in the <strong>Logs &amp; Console</strong> panel and type the appropriate AT command:
+          </div>
+          <div class="console-box">
+            AT+NAME=ND-2<br>
+            <span style="color:var(--muted)">  — or —</span><br>
+            AT+NAME=ND-3
+          </div>
+          <div class="note-box">
+            <strong>Note:</strong> Assign the device number based on the <strong>Total Installation count</strong> shown at the top of this page. For example, if this is the 3rd installation, use <code style="color:var(--accent)">AT+NAME=ND-3</code>.
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</main>
+
+<footer>
+  <div class="copy">© 2024 <span>NueTech</span> — Energy for Changing World</div>
+  <div class="powered">Powered by ESP Web Tools</div>
+</footer>
+
+<!-- FIREBASE + LOGIC -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getFirestore, doc, getDoc, updateDoc, collection, addDoc, increment }
+  from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyBI9PYpqAd_5uX5b3ICQ6fLgBaJ_8mDLVc",
+  authDomain: "esp32-flasher-e402f.firebaseapp.com",
+  projectId: "esp32-flasher-e402f",
+  storageBucket: "esp32-flasher-e402f.firebasestorage.app",
+  messagingSenderId: "835141727928",
+  appId: "1:835141727928:web:d1c0a557c7611c4002e64d",
+  measurementId: "G-FP2HTH72EG"
+};
+
+const app = initializeApp(firebaseConfig);
+const db  = getFirestore(app);
+const counterRef = doc(db, "stats", "counter");
+
+async function loadCount() {
+  try {
+    const snap = await getDoc(counterRef);
+    if (snap.exists()) {
+      document.getElementById("count").textContent = snap.data().count ?? 0;
+    }
+  } catch (err) {
+    console.error("Error loading count:", err);
+  }
+}
+loadCount();
+
+async function incrementCount() {
+  try {
+    // Use atomic increment to avoid race conditions
+    await updateDoc(counterRef, { count: increment(1) });
+    await addDoc(collection(db, "installs"), { timestamp: new Date().toISOString() });
+    await loadCount();
+    const countEl = document.getElementById("count");
+    setStatus(`✓ Installation #${countEl.textContent} logged successfully!`, "success");
+    console.log("✅ Installation count incremented successfully");
+  } catch (err) {
+    console.error("Error logging install:", err);
+    setStatus("⚠️ Flash succeeded but failed to log count: " + err.message, "error");
+  }
+}
+
+const setStatus = (msg, type = 'info') => {
+  const el = document.getElementById("status");
+  el.textContent = msg;
+  el.className = type;
+};
+
+// ── Detect successful flash from ewt-install-dialog ──
+// ESP Web Tools v10 uses Lit web components with nested Shadow DOMs.
+// We need to recursively traverse ALL shadow roots to find success text.
+
+let alreadyIncremented = false;   // guard: count once per flash session
+let alreadyReloaded = false;      // guard: reload once per failure session
+let currentDialog = null;
+let pollInterval = null;
+
+// Recursively extract ALL text from an element, including nested shadow DOMs
+function getDeepText(root) {
+  let text = "";
+  if (!root) return text;
+
+  // Get text from this level
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+  while (walker.nextNode()) {
+    text += walker.currentNode.textContent;
+  }
+
+  // Recurse into shadow roots of child elements
+  const allElements = root.querySelectorAll("*");
+  for (const el of allElements) {
+    if (el.shadowRoot) {
+      text += getDeepText(el.shadowRoot);
+    }
+  }
+
+  return text;
+}
+
+// Recursively search for elements matching a selector across shadow boundaries
+function deepQueryAll(root, selector) {
+  let results = [];
+  if (!root) return results;
+
+  results.push(...root.querySelectorAll(selector));
+
+  const allElements = root.querySelectorAll("*");
+  for (const el of allElements) {
+    if (el.shadowRoot) {
+      results.push(...deepQueryAll(el.shadowRoot, selector));
+    }
+  }
+
+  return results;
+}
+
+// Check if the dialog shows a success state
+function checkDialogForSuccess(dialog) {
+  if (!dialog) return false;
+
+  // --- Method 1: Check dialog's internal Lit properties ---
+  // Lit elements store their state as regular JS properties
+  const possibleStateProps = [
+    "_state", "state", "_installState", "installState",
+    "_curState", "curState", "_installationState"
+  ];
+  for (const prop of possibleStateProps) {
+    const val = dialog[prop];
+    if (val !== undefined) {
+      const strVal = String(val).toLowerCase();
+      if (strVal === "finished" || strVal === "done" || strVal === "complete" || strVal === "success") {
+        console.log(`✅ Success detected via property "${prop}" = "${val}"`);
+        return true;
+      }
+    }
+  }
+
+  // --- Method 2: Deep text extraction from ALL nested shadow DOMs ---
+  if (dialog.shadowRoot) {
+    const deepText = getDeepText(dialog.shadowRoot).toLowerCase();
+
+    const successPatterns = [
+      "installation complete",
+      "installation successful",
+      "successfully installed",
+      "has been installed",
+      "done!"
+    ];
+
+    for (const pattern of successPatterns) {
+      if (deepText.includes(pattern)) {
+        console.log(`✅ Success detected via deep text match: "${pattern}"`);
+        return true;
+      }
+    }
+
+    // --- Method 3: Check for "Next" button deep in shadow DOM ---
+    const buttons = deepQueryAll(dialog.shadowRoot, "button, ew-filled-button, md-filled-button, [slot='primaryAction'], [slot='secondaryAction']");
+    for (const btn of buttons) {
+      const btnText = getDeepText(btn).toLowerCase().trim() || (btn.textContent || "").toLowerCase().trim();
+      if (btnText.includes("next")) {
+        // "Next" appears only after successful installation (not during errors)
+        if (!deepText.includes("error") && !deepText.includes("failed")) {
+          console.log(`✅ Success detected via "Next" button presence`);
+          return true;
+        }
+      }
+    }
+
+    // --- Method 4: Check innerHTML for success patterns (backup) ---
+    const html = dialog.shadowRoot.innerHTML.toLowerCase();
+    for (const pattern of successPatterns) {
+      if (html.includes(pattern)) {
+        console.log(`✅ Success detected via innerHTML match: "${pattern}"`);
+        return true;
+      }
+    }
+  }
+
+  // --- Method 5: Check outerHTML/innerHTML of dialog itself ---
+  const dialogHTML = (dialog.innerHTML || "").toLowerCase();
+  if (dialogHTML.includes("installation complete") || dialogHTML.includes("successfully installed")) {
+    console.log("✅ Success detected via dialog innerHTML");
+    return true;
+  }
+
+  return false;
+}
+
+// Check if the dialog shows a failure/error state
+function checkDialogForFailure(dialog) {
+  if (!dialog) return false;
+
+  // --- Method 1: Check dialog's internal Lit properties ---
+  const possibleStateProps = [
+    "_state", "state", "_installState", "installState",
+    "_curState", "curState", "_installationState"
+  ];
+  for (const prop of possibleStateProps) {
+    const val = dialog[prop];
+    if (val !== undefined) {
+      const strVal = String(val).toLowerCase();
+      if (strVal === "error" || strVal === "failed") {
+        console.log(`❌ Failure detected via property "${prop}" = "${val}"`);
+        return true;
+      }
+    }
+  }
+
+  // --- Method 2: Deep text extraction from ALL nested shadow DOMs ---
+  if (dialog.shadowRoot) {
+    const deepText = getDeepText(dialog.shadowRoot).toLowerCase();
+
+    const failurePatterns = [
+      "installation failed",
+      "failed to initialize",
+      "no serial data received"
+    ];
+
+    for (const pattern of failurePatterns) {
+      if (deepText.includes(pattern)) {
+        console.log(`❌ Failure detected via deep text match: "${pattern}"`);
+        return true;
+      }
+    }
+  }
+
+  // --- Method 3: Check outerHTML/innerHTML of dialog itself ---
+  const dialogHTML = (dialog.innerHTML || "").toLowerCase();
+  if (dialogHTML.includes("installation failed") || dialogHTML.includes("failed to initialize")) {
+    console.log("❌ Failure detected via dialog innerHTML");
+    return true;
+  }
+
+  return false;
+}
+
+function onFlashSuccess() {
+  if (alreadyIncremented) return;
+  alreadyIncremented = true;
+
+  const wrap = document.getElementById("progressWrap");
+  const fill = document.getElementById("progressFill");
+  const lbl  = document.getElementById("progLabel");
+  const pct  = document.getElementById("progPct");
+
+  wrap.style.display = "block";
+  fill.style.width   = "100%";
+  pct.textContent    = "100%";
+  lbl.textContent    = "Complete ✓";
+
+  console.log("🎉 Flash success detected! Incrementing counter...");
+  incrementCount();
+}
+
+function onFlashFailure() {
+  if (alreadyReloaded) return;
+  alreadyReloaded = true;
+
+  console.log("❌ Flash failure detected! Reloading page in 2 seconds...");
+  setStatus("⚠️ Installation failed. Reloading page in 2 seconds...", "error");
+
+  setTimeout(() => {
+    location.reload();
+  }, 2000);
+}
+
+function startWatchingDialog(dialog) {
+  console.log("🔌 Found ewt-install-dialog, starting monitoring");
+  console.log("   shadowRoot exists:", !!dialog.shadowRoot);
+  console.log("   dialog properties:", Object.keys(dialog).filter(k => !k.startsWith("__")).slice(0, 20));
+  currentDialog = dialog;
+  alreadyIncremented = false;
+  alreadyReloaded = false;
+
+  // Stop any previous poll
+  if (pollInterval) clearInterval(pollInterval);
+
+  // Method A: Watch shadow DOM for changes using MutationObserver
+  const setupShadowObserver = () => {
+    if (dialog.shadowRoot) {
+      const shadowObserver = new MutationObserver(() => {
+        if (!alreadyIncremented && checkDialogForSuccess(dialog)) {
+          onFlashSuccess();
+        } else if (!alreadyReloaded && checkDialogForFailure(dialog)) {
+          onFlashFailure();
+        }
+      });
+      shadowObserver.observe(dialog.shadowRoot, {
+        childList: true, subtree: true, characterData: true, attributes: true
+      });
+      console.log("✅ Shadow DOM MutationObserver attached");
+      return true;
+    }
+    return false;
+  };
+
+  // Try immediately, and retry after delays if shadow root isn't ready yet
+  if (!setupShadowObserver()) {
+    console.log("⏳ Shadow root not ready, will retry...");
+    setTimeout(() => setupShadowObserver(), 100);
+    setTimeout(() => setupShadowObserver(), 500);
+    setTimeout(() => setupShadowObserver(), 1000);
+  }
+
+  // Method B: Poll every 1s — the most reliable fallback
+  pollInterval = setInterval(() => {
+    if (!document.body.contains(dialog)) {
+      clearInterval(pollInterval);
+      pollInterval = null;
+      return;
+    }
+    if (!alreadyIncremented && checkDialogForSuccess(dialog)) {
+      onFlashSuccess();
+    } else if (!alreadyReloaded && checkDialogForFailure(dialog)) {
+      onFlashFailure();
+    }
+  }, 1000);
+
+  // Method C: Listen for "closed" event
+  dialog.addEventListener("closed", () => {
+    console.log("📡 Dialog closed event fired");
+    // Small delay to let final state settle
+    setTimeout(() => {
+      if (!alreadyIncremented && checkDialogForSuccess(dialog)) {
+        onFlashSuccess();
+      } else if (!alreadyReloaded && checkDialogForFailure(dialog)) {
+        onFlashFailure();
+      }
+    }, 200);
+    if (pollInterval) {
+      clearInterval(pollInterval);
+      pollInterval = null;
+    }
+  }, { once: true });
+
+  // Method D: Also try state-changed event (some versions)
+  dialog.addEventListener("state-changed", (e) => {
+    const detail = e.detail;
+    if (!detail) return;
+    console.log("📡 state-changed event received:", detail);
+    if (detail.state === "finished" && !alreadyIncremented) {
+      onFlashSuccess();
+    } else if ((detail.state === "failed" || detail.state === "error") && !alreadyReloaded) {
+      onFlashFailure();
+    }
+  });
+}
+
+// Watch for the ewt-install-dialog being added to the DOM
+const observer = new MutationObserver((mutations) => {
+  for (const mutation of mutations) {
+    for (const node of mutation.addedNodes) {
+      if (node.nodeName && node.nodeName.toLowerCase() === "ewt-install-dialog") {
+        startWatchingDialog(node);
+      }
+    }
+  }
+});
+observer.observe(document.body, { childList: true, subtree: true });
+
+// Polling fallback: check for dialog every 500ms
+let lastDialogRef = null;
+setInterval(() => {
+  const dialog = document.querySelector("ewt-install-dialog");
+  if (dialog && dialog !== lastDialogRef) {
+    lastDialogRef = dialog;
+    startWatchingDialog(dialog);
+  }
+}, 500);
+
+// ===== DARK / LIGHT MODE TOGGLE =====
+const html  = document.documentElement;
+const btn   = document.getElementById("themeToggle");
+const icon  = document.getElementById("themeIcon");
+const label = document.getElementById("themeLabel");
+const logoImg = document.getElementById("logoImg");
+
+function applyTheme(theme) {
+  html.setAttribute("data-theme", theme);
+  if (theme === "dark") {
+    icon.textContent  = "☀️";
+    label.textContent = "Light";
+    logoImg.src = "Nuetech_Logo_dark.png";
+  } else {
+    icon.textContent  = "🌙";
+    label.textContent = "Dark";
+    logoImg.src = "Nuetech_Logo_light.png";
+  }
+  localStorage.setItem("nt-theme", theme);
+}
+
+// Load saved preference
+const saved = localStorage.getItem("nt-theme") || "dark";
+applyTheme(saved);
+
+btn.addEventListener("click", () => {
+  const current = html.getAttribute("data-theme");
+  applyTheme(current === "dark" ? "light" : "dark");
+});
+</script>
+
+</body>
+</html>

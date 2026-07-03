@@ -1,0 +1,846 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NueTech Admin — Device Flasher</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  /* ===== DARK THEME (default) ===== */
+  :root, [data-theme="dark"] {
+    --bg:        #0a0c10;
+    --surface:   #111318;
+    --surface2:  #16191f;
+    --border:    #1e2330;
+    --border-hi: #2d3448;
+    --accent:    #00c8ff;
+    --accent2:   #0077ff;
+    --success:   #00e676;
+    --danger:    #ff5252;
+    --warn:      #ffab40;
+    --text:      #e8ecf0;
+    --muted:     #6b7a99;
+    --topbar-bg: rgba(10,12,16,0.96);
+    --login-input-bg: rgba(0,0,0,0.4);
+  }
+
+  /* ===== LIGHT THEME ===== */
+  [data-theme="light"] {
+    --bg:        #f0f4f8;
+    --surface:   #ffffff;
+    --surface2:  #f7f9fc;
+    --border:    #dde3ed;
+    --border-hi: #bbc5d8;
+    --accent:    #0077cc;
+    --accent2:   #005fa3;
+    --success:   #00a854;
+    --danger:    #cc2200;
+    --warn:      #e07800;
+    --text:      #1a2130;
+    --muted:     #5a6a80;
+    --topbar-bg: rgba(255,255,255,0.95);
+    --login-input-bg: rgba(0,0,0,0.04);
+  }
+
+  body {
+    font-family: 'Inter', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    transition: background 0.3s, color 0.3s;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0,200,255,0.025) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,200,255,0.025) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  [data-theme="light"] body::before {
+    background-image:
+      linear-gradient(rgba(0,100,200,0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,100,200,0.04) 1px, transparent 1px);
+  }
+
+  /* ===== LOGIN SCREEN ===== */
+  #loginScreen {
+    position: fixed;
+    inset: 0;
+    z-index: 200;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg);
+    padding: 20px;
+    transition: background 0.3s;
+  }
+
+  .login-card {
+    width: 100%;
+    max-width: 400px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 40px 36px;
+    box-shadow: 0 0 0 1px var(--border), 0 30px 80px rgba(0,0,0,0.7);
+    transition: background 0.3s, border-color 0.3s;
+  }
+
+  [data-theme="light"] .login-card {
+    box-shadow: 0 0 0 1px var(--border), 0 10px 40px rgba(0,0,0,0.08);
+  }
+
+  .login-logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 32px;
+  }
+
+  .login-logo-icon {
+    width: 38px; height: 38px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  .login-logo-icon svg { width: 20px; height: 20px; }
+
+  .login-logo-text .name {
+    font-size: 16px; font-weight: 700;
+  }
+
+  .login-logo-text .sub {
+    font-size: 11px; color: var(--muted);
+    text-transform: uppercase; letter-spacing: 1px;
+  }
+
+  .login-title {
+    font-size: 22px; font-weight: 700;
+    margin-bottom: 6px;
+  }
+
+  .login-desc {
+    font-size: 13px; color: var(--muted);
+    margin-bottom: 28px;
+    line-height: 1.5;
+  }
+
+  .field { margin-bottom: 14px; }
+
+  .field label {
+    display: block;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    margin-bottom: 6px;
+  }
+
+  .field input {
+    width: 100%;
+    padding: 11px 14px;
+    background: var(--login-input-bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    color: var(--text);
+    outline: none;
+    transition: border-color 0.2s, background 0.3s;
+  }
+
+  .field input::placeholder { color: var(--muted); }
+  .field input:focus { border-color: var(--accent); }
+
+  .login-btn {
+    width: 100%;
+    margin-top: 8px;
+    padding: 13px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border: none;
+    border-radius: 10px;
+    font-family: 'Inter', sans-serif;
+    font-size: 15px;
+    font-weight: 600;
+    color: white;
+    cursor: pointer;
+    transition: opacity 0.2s;
+  }
+
+  .login-btn:hover { opacity: 0.88; }
+  .login-btn:active { transform: scale(0.99); }
+  .login-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  #loginError {
+    font-size: 13px;
+    color: var(--danger);
+    margin-top: 12px;
+    text-align: center;
+    min-height: 20px;
+  }
+
+  /* ===== ADMIN PANEL ===== */
+  #adminPanel { display: none; }
+
+  /* top bar */
+  .topbar {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 32px;
+    border-bottom: 1px solid var(--border);
+    background: var(--topbar-bg);
+    backdrop-filter: blur(12px);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    transition: background 0.3s, border-color 0.3s;
+  }
+
+  .topbar-logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    text-decoration: none;
+  }
+
+  .topbar-logo-icon {
+    width: 30px; height: 30px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  .topbar-logo-icon svg { width: 17px; height: 17px; }
+
+  .topbar-name { font-size: 14px; font-weight: 700; }
+  .topbar-sub  { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; }
+
+  .topbar-right { display: flex; align-items: center; gap: 14px; }
+
+  .admin-badge {
+    font-size: 11px;
+    padding: 4px 10px;
+    background: rgba(255,171,64,0.1);
+    border: 1px solid rgba(255,171,64,0.25);
+    border-radius: 4px;
+    color: var(--warn);
+    font-weight: 600;
+    letter-spacing: 0.5px;
+  }
+
+  #userEmail {
+    font-size: 12px;
+    color: var(--muted);
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .logout-btn {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--muted);
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 6px 12px;
+    cursor: pointer;
+    font-family: 'Inter', sans-serif;
+    transition: all 0.2s;
+  }
+
+  .logout-btn:hover { color: var(--danger); border-color: var(--danger); }
+
+  /* page content */
+  .page {
+    position: relative;
+    z-index: 1;
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 40px 24px 80px;
+  }
+
+  .page-header {
+    margin-bottom: 32px;
+  }
+
+  .page-header h1 {
+    font-size: 24px; font-weight: 700;
+    margin-bottom: 4px;
+  }
+
+  .page-header p { font-size: 13px; color: var(--muted); }
+
+  /* stat cards */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    margin-bottom: 32px;
+  }
+
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 20px 22px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .stat-card::after {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    opacity: 0.5;
+  }
+
+  .stat-card.green::after  { background: var(--success); }
+  .stat-card.yellow::after { background: var(--warn); }
+
+  .stat-card .label {
+    font-size: 11px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    margin-bottom: 10px;
+  }
+
+  .stat-card .value {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--text);
+    line-height: 1;
+    margin-bottom: 4px;
+  }
+
+  .stat-card .meta {
+    font-size: 11px;
+    color: var(--muted);
+  }
+
+  /* section panels */
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    margin-bottom: 20px;
+    overflow: hidden;
+  }
+
+  .panel-header {
+    padding: 16px 22px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .panel-title {
+    font-size: 14px;
+    font-weight: 600;
+  }
+
+  .panel-body { padding: 22px; }
+
+  /* edit count form */
+  .edit-row {
+    display: flex;
+    gap: 12px;
+    align-items: flex-end;
+  }
+
+  .edit-row .field { flex: 1; margin: 0; }
+
+  .edit-row .field label {
+    font-size: 11px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    margin-bottom: 6px;
+    display: block;
+  }
+
+  .edit-row .field input {
+    width: 100%;
+    padding: 10px 13px;
+    background: var(--login-input-bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 14px;
+    color: var(--text);
+    outline: none;
+    transition: border-color 0.2s, background 0.3s;
+  }
+
+  .edit-row .field input:focus { border-color: var(--accent); }
+
+  .btn-primary {
+    padding: 10px 22px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border: none;
+    border-radius: 8px;
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    color: white;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: opacity 0.2s;
+    flex-shrink: 0;
+  }
+
+  .btn-primary:hover { opacity: 0.85; }
+  .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .btn-danger {
+    padding: 10px 22px;
+    background: rgba(255,82,82,0.1);
+    border: 1px solid rgba(255,82,82,0.3);
+    border-radius: 8px;
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--danger);
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.2s;
+    flex-shrink: 0;
+  }
+
+  .btn-danger:hover { background: rgba(255,82,82,0.18); }
+
+  #updateMsg {
+    font-size: 13px;
+    margin-top: 12px;
+    min-height: 20px;
+  }
+
+  #updateMsg.success { color: var(--success); }
+  #updateMsg.error   { color: var(--danger); }
+
+  /* install log table */
+  .log-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+
+  .log-table th {
+    text-align: left;
+    padding: 10px 14px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    color: var(--muted);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .log-table td {
+    padding: 11px 14px;
+    border-bottom: 1px solid var(--border);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--muted);
+  }
+
+  .log-table tr:last-child td { border-bottom: none; }
+  .log-table tr:hover td { background: rgba(255,255,255,0.02); }
+
+  .log-table .num { color: var(--accent); }
+  .log-table .ts  { color: var(--text); }
+
+  #logsEmpty {
+    text-align: center;
+    padding: 40px;
+    color: var(--muted);
+    font-size: 13px;
+  }
+
+  .loading-row {
+    text-align: center;
+    padding: 32px;
+    color: var(--muted);
+    font-size: 13px;
+  }
+
+  /* spinner */
+  .spinner {
+    display: inline-block;
+    width: 14px; height: 14px;
+    border: 2px solid rgba(0,200,255,0.2);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    margin-right: 8px;
+    vertical-align: middle;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* refresh btn */
+  .icon-btn {
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 5px 10px;
+    font-size: 13px;
+    color: var(--muted);
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: 'Inter', sans-serif;
+  }
+
+  .icon-btn:hover { color: var(--text); border-color: var(--border-hi); }
+
+  /* ===== THEME TOGGLE ===== */
+  .theme-toggle {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 5px 12px;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--muted);
+    transition: all 0.2s;
+    font-family: 'Inter', sans-serif;
+  }
+  .theme-toggle:hover { border-color: var(--border-hi); color: var(--text); }
+  .theme-toggle .icon { font-size: 14px; }
+
+  .login-theme-toggle {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+  }
+
+  /* Transitions for panels */
+  .stat-card, .panel { transition: background 0.3s, border-color 0.3s; }
+
+  [data-theme="light"] .stat-card::after { opacity: 0.7; }
+
+  @media (max-width: 680px) {
+    .stats-grid { grid-template-columns: 1fr 1fr; }
+    .edit-row { flex-direction: column; align-items: stretch; }
+    .topbar { padding: 12px 16px; }
+    #userEmail { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ===== LOGIN ===== -->
+<div id="loginScreen">
+  <button class="theme-toggle login-theme-toggle" id="loginThemeToggle" title="Toggle theme">
+    <span class="icon" id="loginThemeIcon">☀️</span>
+    <span id="loginThemeLabel">Light</span>
+  </button>
+  <div class="login-card">
+    <div class="login-logo">
+      <img src="Nuetech_Logo_dark.png" alt="NueTech Logo" id="loginLogoImg" style="height:40px;width:auto;object-fit:contain;">
+      <div class="login-logo-text">
+        <div class="name">NueTech</div>
+        <div class="sub">Device Flasher</div>
+      </div>
+    </div>
+
+    <div class="login-title">Admin Login</div>
+    <div class="login-desc">Restricted access. Enter your credentials to manage firmware installations and device statistics.</div>
+
+    <div class="field">
+      <label>Email address</label>
+      <input id="email" type="email" placeholder="admin@nuetech.io" autocomplete="email">
+    </div>
+
+    <div class="field">
+      <label>Password</label>
+      <input id="password" type="password" placeholder="••••••••" autocomplete="current-password">
+    </div>
+
+    <button class="login-btn" id="loginBtn">Sign In</button>
+    <div id="loginError"></div>
+  </div>
+</div>
+
+<!-- ===== ADMIN PANEL ===== -->
+<div id="adminPanel">
+
+  <header class="topbar">
+    <a href="index.html" class="topbar-logo">
+      <img src="Nuetech_Logo_dark.png" alt="NueTech Logo" id="adminLogoImg" style="height:34px;width:auto;object-fit:contain;">
+      <div>
+        <div class="topbar-name">NueTech</div>
+        <div class="topbar-sub">Device Flasher</div>
+      </div>
+    </a>
+    <div class="topbar-right">
+      <span class="admin-badge">ADMIN</span>
+      <span id="userEmail"></span>
+      <button class="theme-toggle" id="adminThemeToggle" title="Toggle theme">
+        <span class="icon" id="adminThemeIcon">☀️</span>
+        <span id="adminThemeLabel">Light</span>
+      </button>
+      <button class="logout-btn" id="logoutBtn">Sign Out</button>
+    </div>
+  </header>
+
+  <div class="page">
+    <div class="page-header">
+      <h1>Dashboard</h1>
+      <p>Manage installation statistics and review device flash logs.</p>
+    </div>
+
+    <!-- Stat cards -->
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="label">Total Installations</div>
+        <div class="value" id="totalCount">—</div>
+        <div class="meta">All time</div>
+      </div>
+      <div class="stat-card green">
+        <div class="label">Firmware Version</div>
+        <div class="value" style="font-size:16px;padding-top:6px;">v2.2_ND_1</div>
+        <div class="meta">Final Release Build</div>
+      </div>
+      <div class="stat-card yellow">
+        <div class="label">Target Chip</div>
+        <div class="value" style="font-size:22px;padding-top:4px;">ESP32</div>
+        <div class="meta">Offset 0x0</div>
+      </div>
+    </div>
+
+    <!-- Edit count -->
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title">Manage Installation Counter</div>
+      </div>
+      <div class="panel-body">
+        <div class="edit-row">
+          <div class="field">
+            <label>Set Counter Value</label>
+            <input id="newCount" type="number" placeholder="Enter new count…" min="0">
+          </div>
+          <button class="btn-primary" id="updateBtn">Update Count</button>
+          <button class="btn-danger" id="resetBtn">Reset to 0</button>
+        </div>
+        <div id="updateMsg"></div>
+      </div>
+    </div>
+
+    <!-- Install log -->
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title">Installation Log</div>
+        <button class="icon-btn" id="refreshBtn">↻ Refresh</button>
+      </div>
+      <div class="panel-body" style="padding:0;">
+        <div id="logsContainer">
+          <div class="loading-row">
+            <span class="spinner"></span> Loading logs…
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getAuth, signInWithEmailAndPassword, signOut }
+  from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { getFirestore, doc, getDoc, updateDoc, collection, getDocs, query, orderBy, limit }
+  from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyBI9PYpqAd_5uX5b3ICQ6fLgBaJ_8mDLVc",
+  authDomain: "esp32-flasher-e402f.firebaseapp.com",
+  projectId: "esp32-flasher-e402f",
+  storageBucket: "esp32-flasher-e402f.firebasestorage.app",
+  messagingSenderId: "835141727928",
+  appId: "1:835141727928:web:d1c0a557c7611c4002e64d",
+  measurementId: "G-FP2HTH72EG"
+};
+
+const app  = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db   = getFirestore(app);
+const counterRef = doc(db, "stats", "counter");
+
+function setMsg(msg, type = '') {
+  const el = document.getElementById("updateMsg");
+  el.textContent = msg; el.className = type;
+}
+
+async function loadStats() {
+  const snap = await getDoc(counterRef);
+  const count = snap.exists() ? (snap.data().count ?? 0) : 0;
+  document.getElementById("totalCount").textContent = count;
+}
+
+async function loadLogs() {
+  const container = document.getElementById("logsContainer");
+  container.innerHTML = `<div class="loading-row"><span class="spinner"></span> Loading logs…</div>`;
+  try {
+    const q = query(collection(db, "installs"), orderBy("timestamp", "desc"), limit(50));
+    const snap = await getDocs(q);
+    if (snap.empty) {
+      container.innerHTML = `<div id="logsEmpty">No installation records found.</div>`;
+      return;
+    }
+    let rows = '';
+    snap.docs.forEach((d, i) => {
+      const ts = d.data().timestamp;
+      const date = ts ? new Date(ts).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' }) : '—';
+      rows += `<tr>
+        <td class="num">#${snap.size - i}</td>
+        <td class="ts">${date}</td>
+        <td>${d.id.slice(0,16)}…</td>
+      </tr>`;
+    });
+    container.innerHTML = `
+      <table class="log-table">
+        <thead><tr>
+          <th>#</th>
+          <th>Timestamp</th>
+          <th>Record ID</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>`;
+  } catch (err) {
+    container.innerHTML = `<div id="logsEmpty">Failed to load logs.</div>`;
+  }
+}
+
+// LOGIN
+document.getElementById("loginBtn").addEventListener("click", async () => {
+  const btn = document.getElementById("loginBtn");
+  const err = document.getElementById("loginError");
+  btn.textContent = "Signing in…"; btn.disabled = true; err.textContent = '';
+  try {
+    const cred = await signInWithEmailAndPassword(
+      auth,
+      document.getElementById("email").value.trim(),
+      document.getElementById("password").value
+    );
+    document.getElementById("userEmail").textContent = cred.user.email;
+    document.getElementById("loginScreen").style.display = "none";
+    document.getElementById("adminPanel").style.display  = "block";
+    await loadStats();
+    await loadLogs();
+  } catch (e) {
+    err.textContent = e.message.replace("Firebase: ", "");
+    btn.textContent = "Sign In"; btn.disabled = false;
+  }
+});
+
+// Allow Enter key on password
+document.getElementById("password").addEventListener("keydown", e => {
+  if (e.key === "Enter") document.getElementById("loginBtn").click();
+});
+
+// LOGOUT
+document.getElementById("logoutBtn").addEventListener("click", async () => {
+  await signOut(auth);
+  document.getElementById("loginScreen").style.display = "flex";
+  document.getElementById("adminPanel").style.display  = "none";
+  document.getElementById("email").value    = '';
+  document.getElementById("password").value = '';
+  document.getElementById("loginBtn").textContent = "Sign In";
+  document.getElementById("loginBtn").disabled = false;
+});
+
+// UPDATE COUNT
+document.getElementById("updateBtn").addEventListener("click", async () => {
+  const val = Number(document.getElementById("newCount").value);
+  if (isNaN(val) || val < 0) { setMsg("Enter a valid number.", "error"); return; }
+  try {
+    await updateDoc(counterRef, { count: val });
+    document.getElementById("totalCount").textContent = val;
+    setMsg(`✓ Counter updated to ${val}`, "success");
+    document.getElementById("newCount").value = '';
+  } catch (e) { setMsg("Update failed: " + e.message, "error"); }
+});
+
+// RESET COUNT
+document.getElementById("resetBtn").addEventListener("click", async () => {
+  if (!confirm("Reset installation counter to 0?")) return;
+  try {
+    await updateDoc(counterRef, { count: 0 });
+    document.getElementById("totalCount").textContent = 0;
+    setMsg("✓ Counter reset to 0", "success");
+  } catch (e) { setMsg("Reset failed: " + e.message, "error"); }
+});
+
+// REFRESH LOGS
+document.getElementById("refreshBtn").addEventListener("click", async () => {
+  await loadStats();
+  await loadLogs();
+});
+
+// ===== DARK / LIGHT MODE TOGGLE =====
+const htmlEl = document.documentElement;
+const loginLogoImg = document.getElementById("loginLogoImg");
+const adminLogoImg = document.getElementById("adminLogoImg");
+
+function applyAdminTheme(theme) {
+  htmlEl.setAttribute("data-theme", theme);
+  const isDark = theme === "dark";
+  const logoSrc = isDark ? "Nuetech_Logo_dark.png" : "Nuetech_Logo_light.png";
+
+  // Update login screen toggle
+  document.getElementById("loginThemeIcon").textContent = isDark ? "☀️" : "🌙";
+  document.getElementById("loginThemeLabel").textContent = isDark ? "Light" : "Dark";
+
+  // Update admin panel toggle
+  document.getElementById("adminThemeIcon").textContent = isDark ? "☀️" : "🌙";
+  document.getElementById("adminThemeLabel").textContent = isDark ? "Light" : "Dark";
+
+  // Update logos
+  if (loginLogoImg) loginLogoImg.src = logoSrc;
+  if (adminLogoImg) adminLogoImg.src = logoSrc;
+
+  localStorage.setItem("nt-theme", theme);
+}
+
+// Load saved preference (shared with index.html)
+const savedTheme = localStorage.getItem("nt-theme") || "dark";
+applyAdminTheme(savedTheme);
+
+// Login screen toggle
+document.getElementById("loginThemeToggle").addEventListener("click", () => {
+  const current = htmlEl.getAttribute("data-theme");
+  applyAdminTheme(current === "dark" ? "light" : "dark");
+});
+
+// Admin panel toggle
+document.getElementById("adminThemeToggle").addEventListener("click", () => {
+  const current = htmlEl.getAttribute("data-theme");
+  applyAdminTheme(current === "dark" ? "light" : "dark");
+});
+</script>
+
+</body>
+</html>
