@@ -578,9 +578,31 @@
             After the <strong>Successful</strong> pop-up appears, click <strong>Next</strong>. Then click <strong>Logs &amp; Console</strong> again.
             <br><br>
             Now <strong>turn OFF and then ON</strong> the NueTech device using the Power ON/OFF button to let it boot with the new firmware.
+            <br><br>
+            You should see the following output in the Console, confirming the device is firmware updated:
           </div>
-          <div class="blank-space">
-            [ Additional steps will be added here ]
+          <div class="console-box">
+            rst:0x1 (POWERON_RESET),boot:0x13 (SPI_FAST_FLASH_BOOT)<br>
+            configsip: 0, SPIWP:0xee<br>
+            clk_drv:0x00,q_drv:0x00,d_drv:0x00,cs0_drv:0x00,hd_drv:0x00,wp_drv:0x00<br>
+            mode:DIO, clock div:1<br>
+            load:0x3fff0030,len:4980<br>
+            load:0x40078000,len:16612<br>
+            load:0x40080400,len:3480<br>
+            entry 0x400805b4<br>
+            ========================================<br>
+            Nuetech Controller v2.2 (WiFi+BLE)<br>
+            ========================================<br>
+            [SPR] 1-bit mono sprite OK  heap: 187692<br>
+            [RTC] 17:44  2026-07-06<br>
+            [AHT20] T=31.3  H=54.3%<br>
+            [MODE] Communications mode: BLE<br>
+            [BT] Bluetooth started as 'Nuetech'<br>
+            [BT] Send AT+NAME=&lt;newname&gt; via Serial Monitor to rename.<br>
+            [BOOT] Done. Free heap: 89740
+          </div>
+          <div class="note-box">
+            <strong>✓ This output confirms the new firmware version is active and the device has booted successfully.</strong>
           </div>
         </div>
       </div>
