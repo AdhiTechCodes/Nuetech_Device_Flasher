@@ -313,19 +313,12 @@ int     evePeakTemp    = 0;    // highest RT1 seen during evening slot
 uint8_t dayErrorAccum  = 0;    // accumulated error flags during the day
 
 // ─────────────────────────────────────────────────────────────────────────────
-// NOTIFICATION POPUP  (WiFi / NTP updates shown on-screen briefly)
+// NOTIFICATION POPUP  (WiFi / NTP / BLE updates shown on-screen briefly)
 // ─────────────────────────────────────────────────────────────────────────────
 bool          notifPopupActive = false;
 unsigned long notifPopupTime   = 0;
 String        notifPopupMsg    = "";
 String        notifPopupMsg2   = "";
-
-// ─────────────────────────────────────────────────────────────────────────────
-// BLE COMMAND POPUP  (BLE acknowledgment message shown on-screen briefly)
-// ─────────────────────────────────────────────────────────────────────────────
-bool          btPopupActive = false;
-unsigned long btPopupTime   = 0;
-String        btPopupMsg    = "";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // WIFI STATE MACHINE
@@ -1815,12 +1808,16 @@ void readBluetooth() {
   if (msg.startsWith("ST=")) {
     ST1 = constrain(msg.substring(3).toInt(), TEMP_MIN, TEMP_MAX);
     tempHysteresisReady = (RT1 == -999 || RT1 < ST1);
-    btPopupMsg = "Set Temp Updated";
+    notifPopupMsg = "Temp Updated";
+    notifPopupMsg2 = "Set -> " + String(ST1) + " C";
 
   } else if (msg.startsWith("S1S=")) {
     int p = msg.indexOf(':');
     int newH = msg.substring(4,p).toInt(), newM = constrain(msg.substring(p+1).toInt(),0,59);
-    if (newH < SLOT0_MIN_HOUR || newH > SLOT0_MAX_HOUR) { btPopupMsg = "Hour must be 1-12"; }
+    if (newH < SLOT0_MIN_HOUR || newH > SLOT0_MAX_HOUR) {
+      notifPopupMsg = "Morning Slot Error";
+      notifPopupMsg2 = "Hour must be 1-12";
+    }
     else {
       S_H[0] = newH; S_M[0] = newM;
       // Auto-set end time = start + 30 min
@@ -1829,27 +1826,42 @@ void readBluetooth() {
       int newEM = newEndMin % 60;
       if (newEH > SLOT0_MAX_HOUR) { newEH = SLOT0_MAX_HOUR; newEM = 59; }
       E_H[0] = newEH; E_M[0] = newEM;
-      btPopupMsg = "Morning Slot Updated";
+      char tBuf[30];
+      snprintf(tBuf, sizeof(tBuf), "%02d:%02d - %02d:%02d", S_H[0], S_M[0], E_H[0], E_M[0]);
+      notifPopupMsg = "Morning Slot Updated";
+      notifPopupMsg2 = String(tBuf);
     }
 
   } else if (msg.startsWith("S1E=")) {
     int p = msg.indexOf(':');
     int newH = msg.substring(4,p).toInt(), newM = constrain(msg.substring(p+1).toInt(),0,59);
-    if (newH < SLOT0_MIN_HOUR || newH > SLOT0_MAX_HOUR) { btPopupMsg = "Hour must be 1-12"; }
+    if (newH < SLOT0_MIN_HOUR || newH > SLOT0_MAX_HOUR) {
+      notifPopupMsg = "Morning Slot Error";
+      notifPopupMsg2 = "Hour must be 1-12";
+    }
     else {
       int oldH = E_H[0], oldM = E_M[0];
       E_H[0] = newH; E_M[0] = newM;
       int gap = (E_H[0]*60+E_M[0]) - (S_H[0]*60+S_M[0]);
       if (gap < MIN_SLOT_GAP_MINS) {
         E_H[0] = oldH; E_M[0] = oldM;
-        btPopupMsg = "Need 30min gap!";
-      } else { btPopupMsg = "Morning Slot Updated"; }
+        notifPopupMsg = "Morning Slot Error";
+        notifPopupMsg2 = "Need 30min gap!";
+      } else {
+        char tBuf[30];
+        snprintf(tBuf, sizeof(tBuf), "%02d:%02d - %02d:%02d", S_H[0], S_M[0], E_H[0], E_M[0]);
+        notifPopupMsg = "Morning Slot Updated";
+        notifPopupMsg2 = String(tBuf);
+      }
     }
 
   } else if (msg.startsWith("S2S=")) {
     int p = msg.indexOf(':');
     int newH = msg.substring(4,p).toInt(), newM = constrain(msg.substring(p+1).toInt(),0,59);
-    if (newH < SLOT1_MIN_HOUR || newH > SLOT1_MAX_HOUR) { btPopupMsg = "Hour must be 13-23"; }
+    if (newH < SLOT1_MIN_HOUR || newH > SLOT1_MAX_HOUR) {
+      notifPopupMsg = "Evening Slot Error";
+      notifPopupMsg2 = "Hour must be 13-23";
+    }
     else {
       S_H[1] = newH; S_M[1] = newM;
       // Auto-set end time = start + 30 min
@@ -1858,54 +1870,85 @@ void readBluetooth() {
       int newEM = newEndMin % 60;
       if (newEH > SLOT1_MAX_HOUR) { newEH = SLOT1_MAX_HOUR; newEM = 59; }
       E_H[1] = newEH; E_M[1] = newEM;
-      btPopupMsg = "Evening Slot Updated";
+      char tBuf[30];
+      snprintf(tBuf, sizeof(tBuf), "%02d:%02d - %02d:%02d", S_H[1], S_M[1], E_H[1], E_M[1]);
+      notifPopupMsg = "Evening Slot Updated";
+      notifPopupMsg2 = String(tBuf);
     }
 
   } else if (msg.startsWith("S2E=")) {
     int p = msg.indexOf(':');
     int newH = msg.substring(4,p).toInt(), newM = constrain(msg.substring(p+1).toInt(),0,59);
-    if (newH < SLOT1_MIN_HOUR || newH > SLOT1_MAX_HOUR) { btPopupMsg = "Hour must be 13-23"; }
+    if (newH < SLOT1_MIN_HOUR || newH > SLOT1_MAX_HOUR) {
+      notifPopupMsg = "Evening Slot Error";
+      notifPopupMsg2 = "Hour must be 13-23";
+    }
     else {
       int oldH = E_H[1], oldM = E_M[1];
       E_H[1] = newH; E_M[1] = newM;
       int gap = (E_H[1]*60+E_M[1]) - (S_H[1]*60+S_M[1]);
       if (gap < MIN_SLOT_GAP_MINS) {
         E_H[1] = oldH; E_M[1] = oldM;
-        btPopupMsg = "Need 30min Gap!";
-      } else { btPopupMsg = "Evening Slot Updated"; }
+        notifPopupMsg = "Evening Slot Error";
+        notifPopupMsg2 = "Need 30min Gap!";
+      } else {
+        char tBuf[30];
+        snprintf(tBuf, sizeof(tBuf), "%02d:%02d - %02d:%02d", S_H[1], S_M[1], E_H[1], E_M[1]);
+        notifPopupMsg = "Evening Slot Updated";
+        notifPopupMsg2 = String(tBuf);
+      }
     }
 
   } else if (msg.startsWith("S1EN=")) {
     slotEnabled[0] = (msg.substring(5).toInt() != 0);
-    btPopupMsg = slotEnabled[0] ? "Morning Slot ON" : "Morning Slot OFF";
+    notifPopupMsg = "Morning Slot";
+    notifPopupMsg2 = slotEnabled[0] ? "Turned ON" : "Turned OFF";
 
   } else if (msg.startsWith("S2EN=")) {
     slotEnabled[1] = (msg.substring(5).toInt() != 0);
-    btPopupMsg = slotEnabled[1] ? "Evening Slot ON" : "Evening Slot OFF";
+    notifPopupMsg = "Evening Slot";
+    notifPopupMsg2 = slotEnabled[1] ? "Turned ON" : "Turned OFF";
 
   } else if (msg.startsWith("TIME=")) {
     int p = msg.indexOf(':', 5);
     if (p > 0) {
       int hh = msg.substring(5,p).toInt(), mm = msg.substring(p+1).toInt();
       if (hh>=0 && hh<=23 && mm>=0 && mm<=59) {
-        setRTCTime(hh, mm); btPopupMsg = "Time Set: " + String(hh) + ":" + String(mm);
-      } else { btPopupMsg = "Invalid TIME format"; }
-    } else { btPopupMsg = "TIME=HH:MM format"; }
+        setRTCTime(hh, mm);
+        char tBuf[10];
+        snprintf(tBuf, sizeof(tBuf), "%02d:%02d", hh, mm);
+        notifPopupMsg = "RTC Time Set";
+        notifPopupMsg2 = "Time -> " + String(tBuf);
+      } else {
+        notifPopupMsg = "RTC Time Error";
+        notifPopupMsg2 = "Invalid format";
+      }
+    } else {
+      notifPopupMsg = "RTC Time Error";
+      notifPopupMsg2 = "Use TIME=HH:MM";
+    }
 
   } else if (msg.startsWith("DATE=")) {
     int c1 = msg.indexOf(',',5), c2 = msg.indexOf(',',c1+1);
     if (c1>0 && c2>0) {
-      rtc.adjust(DateTime(msg.substring(5,c1).toInt(),
-                          msg.substring(c1+1,c2).toInt(),
-                          msg.substring(c2+1).toInt(), 0, 0, 0));
-      btPopupMsg = "Date Set OK";
-    } else { btPopupMsg = "DATE=YYYY,MM,DD format"; }
+      int yy = msg.substring(5,c1).toInt(), mm = msg.substring(c1+1,c2).toInt(), dd = msg.substring(c2+1).toInt();
+      rtc.adjust(DateTime(yy, mm, dd, 0, 0, 0));
+      char dBuf[20];
+      snprintf(dBuf, sizeof(dBuf), "%04d-%02d-%02d", yy, mm, dd);
+      notifPopupMsg = "RTC Date Set";
+      notifPopupMsg2 = String(dBuf);
+    } else {
+      notifPopupMsg = "RTC Date Error";
+      notifPopupMsg2 = "Use YYYY,MM,DD";
+    }
 
   } else if (msg == "RESETCOIL") {
     coilOnTime = 0; maxCoilError = false; coilErrorAcknowledged = false;
     coilNotWorkingError = false; relayOffTimerActive = false;
     coilWasOn = false; coilEffectivenessActive = false;
-    saveAll(); btPopupMsg = "Coil Timer Reset";
+    saveAll();
+    notifPopupMsg = "Coil Status";
+    notifPopupMsg2 = "Timer Reset OK";
 
   } else if (msg == "Data" || msg == "DATA") {
     SerialBT.println(buildDataResponse());
@@ -1936,13 +1979,15 @@ void readBluetooth() {
 
   } else if (msg == "CLEARLOGS") {
     clearAllLogs();
-    btPopupMsg = "Logs Cleared";
+    notifPopupMsg = "EEPROM Storage";
+    notifPopupMsg2 = "Logs Cleared";
 
   } else {
-    btPopupMsg = "WRONG COMMAND";
+    notifPopupMsg = "BLE Command";
+    notifPopupMsg2 = "Invalid Syntax";
   }
 
-  btPopupActive = true; btPopupTime = millis(); saveAll();
+  notifPopupActive = true; notifPopupTime = millis(); saveAll();
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -2708,11 +2753,6 @@ void loop() {
     if (!coilNotWorkingError) return;
     delay(100); return;
   }
-
-  // ── BLE command popup ─────────────────────────────────────────────────────
-  if (btPopupActive && (millis()-btPopupTime < 1500)) {
-    enforceSafeRelay(); showPopup(btPopupMsg.c_str()); delay(100); return;
-  } else if (btPopupActive) { btPopupActive = false; }
 
   // ── Notification popup ────────────────────────────────────────────────────
   if (notifPopupActive && (millis()-notifPopupTime < 1500)) {
