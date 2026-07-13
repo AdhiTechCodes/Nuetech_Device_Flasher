@@ -1,0 +1,4 @@
+# Ignore compiler artifacts and debugging files that are not needed for flashing
+**/*.elf
+**/*.map
+**/*.merged.bin

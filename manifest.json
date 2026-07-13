@@ -6,15 +6,15 @@
       "chipFamily": "ESP32",
       "parts": [
         {
-          "path": "firmware/v2.2_ND_1_Final_Code.ino.bootloader.bin",
+          "path": "firmware/v2_2_ND_1_Final_Code/build/esp32.esp32.esp32da/v2_2_ND_1_Final_Code.ino.bootloader.bin",
           "offset": 4096
         },
         {
-          "path": "firmware/v2.2_ND_1_Final_Code.ino.partitions.bin",
+          "path": "firmware/v2_2_ND_1_Final_Code/build/esp32.esp32.esp32da/v2_2_ND_1_Final_Code.ino.partitions.bin",
           "offset": 32768
         },
         {
-          "path": "firmware/v2.2_ND_1_Final_Code.ino.bin",
+          "path": "firmware/v2_2_ND_1_Final_Code/build/esp32.esp32.esp32da/v2_2_ND_1_Final_Code.ino.bin",
           "offset": 65536
         }
       ]
